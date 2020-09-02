@@ -45,6 +45,10 @@
   }
 
   function userMove(x, y) {
+    if (pattern[y * 3 + x]) {
+      alert('该处已落子');
+      return;
+    }
     pattern[y * 3 + x] = color;
     if (check(pattern, color)) {
       alert(color == 2 ? '❌ is winner' : '⭕ is winner');
