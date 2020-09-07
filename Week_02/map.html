@@ -65,10 +65,56 @@ async function sleep(t) {
   });
 }
 
+
+// sorted 排序
+
+class Sorted {
+  // compare可以传入自定义的比较方法
+  constructor(data, compare) {
+    // slice: 提取数组的一部分，不传参数，则返回原数组的拷贝
+    this.data = data.slice();
+    this.compare = compare || ((a, b) => a - b);
+  }
+
+  // 获取最小的值
+  take() {
+    if (!this.data.length) {
+      return;
+    }
+
+    let min = this.data[0],
+      minIndex = 0;
+
+    // 循环数据，当前数据和min比较，如果比min小，则将当前值赋值给min，当前位置赋值给minIndex
+    for (let i = 0; i < this.data.length; i++) {
+      if (this.compare(this.data[i], min) < 0) {
+        min = this.data[i];
+        minIndex = i;
+      }
+    }
+
+    // 将数组最后一个值，赋值在最小值的位置，
+    // 此时最小值位置是数组最后一个值，出现了两个数组最后一个值，然后删除数组最后一个值
+    this.data[minIndex] = this.data[this.data.length - 1];
+    this.data.pop();
+    // 数组最小值还保存在min中，返回
+    return min;
+
+  }
+  // 向数组中添加数据
+  give(v) {
+    this.data.push(v);
+  }
+
+  get length() {
+    return this.data.length;
+  }
+}
+
 // 广度优先搜索 队列的形式
 // 计算路径
 async function findPath(map, start, end) {
-  let queue = [start];
+  let queue = new Sorted([start], (a, b) => distance(a) - distance(b));
   let table = Object.create(map);
   // 向队列中添加数据
   async function insert(x, y, pre) {
@@ -91,17 +137,20 @@ async function findPath(map, start, end) {
       container.children[y * 100 + x].style.backgroundColor = 'red';
     }
     // 将该点添加进队列
-    queue.push([x, y]);
+    queue.give([x, y]);
+  }
+  function distance(point) {
+    return (point[0] - end[0]) ** 2 + (point[1] - end[1]) ** 2;
   }
   while(queue.length) {
     // 取出第一个点
-    let [x, y] = queue.shift();
+    let [x, y] = queue.take();
     // console.log(x, y);
     // 如果到达终点，则不继续搜索
     if (x === end[0] &&  y === end[1]) {
       let path = [];
       while (x !== start[0] || y !== start[1]) {
-        path.push(map[y * 100 + x]);
+        path.push(table[y * 100 + x]);
         [x, y] = table[y * 100 + x];
         await sleep(30);
         container.children[y * 100 + x].style.backgroundColor = 'purple';
