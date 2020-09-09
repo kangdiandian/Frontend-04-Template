@@ -1,0 +1,99 @@
+<input id='r' type="range" min=0 max=255 />
+<input id='g' type="range" min=0 max=255 />
+<input id='b' type="range" min=0 max=255 />
+
+<div id="color" style="width: 100px; height: 100px;"></div>
+
+<script>
+  let callbacks = new Map();
+  // callbacks 存储数据
+    // key: 对象
+    // value new Map()
+        // key: propKey
+        // value: [callback]
+  let reactivities = new Map();
+  // 缓存
+  let usedReactivties = [];
+  // usedReactivties 存储数据
+      // [对象, propKey]
+  let object = {
+    r: 1,
+    g: 2,
+    b: 3,
+  };
+
+  // const po = new Proxy(object, {
+  //   set(target, propKey, value, receiver) {
+  //     console.log(target, propKey, value, receiver);
+  //   }
+  // });
+
+  const po = reactive(object);
+
+  effect(() => {
+    document.getElementById('r').value = po.r;
+  });
+  effect(() => {
+    document.getElementById('g').value = po.g;
+  });
+  effect(() => {
+    document.getElementById('b').value = po.b;
+  });
+
+  document.getElementById('r').addEventListener('input', event => { po.r = event.target.value });
+  document.getElementById('g').addEventListener('input', event => { po.g = event.target.value });
+  document.getElementById('b').addEventListener('input', event => { po.b = event.target.value });
+
+  effect(() => {
+    document.getElementById('color').style.backgroundColor = `rgb(${po.r}, ${po.g}, ${po.b})`;
+  });
+
+  function effect(callback) {
+    // callbacks.push(callback);
+    usedReactivties = [];
+    callback();
+    for (let reactivity of usedReactivties) {
+      // 判断没有该key（对象），则新增
+      if (!callbacks.has(reactivity[0])) {
+        callbacks.set(reactivity[0], new Map());
+      }
+      // 判断没有该key（propKey），则新增
+      if (!callbacks.get(reactivity[0]).has(reactivity[1])) {
+        callbacks.get(reactivity[0]).set(reactivity[1], []);
+      }
+      // 若有，则增加值
+      callbacks.get(reactivity[0]).get(reactivity[1]).push(callback);
+    }
+    console.log(callbacks);
+  }
+  function reactive(object) {
+    if (reactivities.has(object)) {
+      return reactivities.get(object);
+    }
+    let proxy = new Proxy(object, {
+      set(target, propKey, value, receiver) {
+        target[propKey] = value;
+        // 判断是否有该对象
+        if (callbacks.get(target)) {
+          // 判断是否有该propKey
+          if (callbacks.get(target).get(propKey)) {
+            // 循环存储的回调函数
+            for (let cb of callbacks.get(target).get(propKey)) {
+              cb();
+            }
+          }
+        }
+        return target[propKey];
+      },
+      get(target, propKey, receiver) {
+        usedReactivties.push([target, propKey]);
+        if (typeof target[propKey] === 'object') {
+          return reactive(target[propKey]);
+        }
+        return target[propKey];
+      }
+    });
+    reactivities.set(object, proxy);
+    return proxy;
+  }
+</script>
